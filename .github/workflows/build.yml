@@ -1,0 +1,206 @@
+# Builds the Jace Games desktop app for Windows, macOS and Linux on GitHub's runners.
+# Every push / PR uploads the installers as workflow artifacts.
+# A push to main with a new "version" in package.json (no release for it yet), or a
+# pushed tag like v1.0.0, also publishes them as a GitHub Release - which is also
+# where the app looks for updates.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      publish: ${{ steps.v.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(node -p "require('./package.json').version")
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"; echo "publish=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]] && ! gh release view "v$V" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "New version v$V: will be released if every build passes"
+            echo "tag=v$V" >> "$GITHUB_OUTPUT"; echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$V is already released (or this isn't a push to main): build and test only"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the installer
+        run: npx electron-builder --win --publish never
+      - name: Test the installer, the installed app and uninstalling
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $setup = (Get-ChildItem dist\JaceGames-*-windows-x64.exe)[0].FullName
+          # 1. install silently, just for this user (no admin), like double-clicking it and pressing Next
+          $p = Start-Process -FilePath $setup -ArgumentList "/S" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "setup exited with $($p.ExitCode)" }
+          $dir = "$env:LOCALAPPDATA\Programs\Jace Games"
+          $exe = "$dir\Jace Games.exe"
+          if (!(Test-Path $exe)) { throw "not installed at $exe" }
+          $sm = [Environment]::GetFolderPath("Programs") + "\Jace Games.lnk"
+          $dt = [Environment]::GetFolderPath("Desktop") + "\Jace Games.lnk"
+          if (!(Test-Path $sm)) { throw "Start menu shortcut missing" }
+          if (!(Test-Path $dt)) { throw "desktop shortcut missing" }
+          $key = Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "Jace Games*" }
+          if (!$key) { throw "Installed apps entry missing" }
+          Get-ItemProperty $key.PSPath | Select-Object DisplayName, DisplayVersion, Publisher, UninstallString | Format-List
+          # 2. the installed app really starts
+          $env:JACE_SELF_TEST_OUT = "$env:RUNNER_TEMP\selftest.txt"
+          $p = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru
+          Get-Content $env:JACE_SELF_TEST_OUT
+          if ($p.ExitCode -ne 0) { throw "self-test exited with $($p.ExitCode)" }
+          # 3. uninstall removes the app, shortcuts and the Installed apps entry
+          $p = Start-Process -FilePath "$dir\Uninstall Jace Games.exe" -ArgumentList "/S" -Wait -PassThru
+          Start-Sleep -Seconds 8
+          if (Test-Path $exe) { throw "app left behind" }
+          if (Test-Path $sm) { throw "Start menu shortcut left behind" }
+          if (Test-Path $dt) { throw "desktop shortcut left behind" }
+          if (Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "Jace Games*" }) { throw "Installed apps entry left behind" }
+          "WINDOWS INSTALLER OK"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (Apple Silicon and Intel)
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # no Apple developer certificate: ad-hoc signed
+        run: npx electron-builder --mac --publish never
+      - name: Test both builds start
+        run: |
+          set -x
+          for arch in arm64 x64; do
+            rm -rf "$RUNNER_TEMP/app-$arch" && mkdir -p "$RUNNER_TEMP/app-$arch"
+            ditto -x -k dist/JaceGames-*-macos-$arch.zip "$RUNNER_TEMP/app-$arch"
+            APP="$RUNNER_TEMP/app-$arch/Jace Games.app"
+            test -d "$APP"
+            /usr/libexec/PlistBuddy -c "Print LSMinimumSystemVersion" "$APP/Contents/Info.plist"
+            if [ "$arch" = arm64 ] || sysctl -n sysctl.proc_translated >/dev/null 2>&1 || arch -x86_64 /usr/bin/true 2>/dev/null; then
+              JACE_SELF_TEST_OUT="$RUNNER_TEMP/selftest-$arch.txt" "$APP/Contents/MacOS/Jace Games" --self-test
+              cat "$RUNNER_TEMP/selftest-$arch.txt"
+            fi
+          done
+          echo "MAC BUILDS OK"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.blockmap
+            dist/latest-mac.yml
+
+  linux:
+    # older Ubuntu = older glibc = the AppImage runs on more distros
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - name: System libraries for the tests
+        run: sudo apt-get update && sudo apt-get install -y xvfb libfuse2
+      - run: npm ci
+      - name: Self-test from source
+        run: xvfb-run -a npx electron . --self-test --no-sandbox
+      - name: Build AppImage and .deb
+        run: npx electron-builder --linux --publish never
+      - name: Test the AppImage starts
+        env:
+          JACE_SELF_TEST_OUT: ${{ runner.temp }}/selftest.txt
+        run: |
+          chmod +x dist/*.AppImage
+          xvfb-run -a ./dist/JaceGames-*-x86_64.AppImage --self-test --no-sandbox
+          cat "$JACE_SELF_TEST_OUT"
+          grep -q "SELF-TEST OK" "$JACE_SELF_TEST_OUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest-linux.yml
+
+  release:
+    if: needs.version.outputs.publish == 'true'
+    needs: [version, windows, macos, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: actions/checkout@v7
+        with:
+          path: src
+      - name: Release notes from CHANGELOG.md
+        run: |
+          V="${{ needs.version.outputs.tag }}"; V="${V#v}"
+          awk -v v="$V" '$0 == "## "v {f=1; next} /^## / {f=0} f' src/CHANGELOG.md > notes.md
+          cat notes.md
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Jace Games ${{ needs.version.outputs.tag }}
+          body_path: notes.md
+          files: artifacts/*
+
+  store:
+    # Publish the new release to Jace Store as links to the GitHub downloads.
+    # Needs the JACE_STORE_TOKEN repository secret; skipped if it isn't set.
+    if: needs.version.outputs.publish == 'true'
+    needs: [version, release]
+    runs-on: ubuntu-latest
+    env:
+      JACE_STORE_TOKEN: ${{ secrets.JACE_STORE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Publish to Jace Store
+        run: |
+          if [ -z "$JACE_STORE_TOKEN" ]; then
+            echo "::warning::JACE_STORE_TOKEN secret not set - skipping Jace Store"
+            exit 0
+          fi
+          python3 packaging/publish_store.py "${{ needs.version.outputs.tag }}"

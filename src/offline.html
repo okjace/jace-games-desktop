@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:" />
+    <title>Jace Games: you're offline</title>
+    <style>
+      :root { color-scheme: light dark; --bg: #ffffff; --fg: #0c1410; --muted: #5b6470; --accent: #2fcf77; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #09090f; --fg: #f4f6f8; --muted: #9aa3ad; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+             font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; padding: 24px; }
+      .tile { width: 96px; height: 96px; border-radius: 28px; margin: 0 auto 20px; display: grid; place-items: center;
+              background: linear-gradient(#4fe896, #2fcf77); font-size: 48px; animation: bob 2.4s ease-in-out infinite; }
+      h1 { margin: 0 0 6px; font-size: 26px; }
+      p { margin: 0 0 22px; color: var(--muted); max-width: 26rem; }
+      button { border: 0; border-radius: 999px; padding: 12px 26px; font: 600 16px system-ui, sans-serif; cursor: pointer;
+               background: var(--accent); color: #0c1410; }
+      button:disabled { opacity: 0.6; cursor: default; }
+      small { display: block; margin-top: 18px; color: var(--muted); }
+      @keyframes bob { 50% { transform: translateY(-6px); } }
+      @media (prefers-reduced-motion: reduce) { .tile { animation: none; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="tile" aria-hidden="true">🎮</div>
+      <h1>You're offline</h1>
+      <p>Jace Games needs the internet. Check your Wi-Fi or connection, then try again.</p>
+      <button id="retry" type="button">Try again</button>
+      <small id="auto">Trying again automatically when you're back online.</small>
+    </main>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const target = params.get("retry") || "https://jace-games.vercel.app";
+      const safe = /^https:\/\/(jace-games|jaceo|jace-social)\.vercel\.app(\/|$)/.test(target) ? target : "https://jace-games.vercel.app";
+      const btn = document.getElementById("retry");
+      const go = () => { btn.disabled = true; btn.textContent = "Connecting…"; location.href = safe; };
+      btn.addEventListener("click", go);
+      if (!params.get("test")) window.addEventListener("online", go);
+    </script>
+  </body>
+</html>
