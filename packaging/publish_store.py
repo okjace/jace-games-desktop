@@ -74,7 +74,7 @@ def publish(tag: str, dry_run=False, existing: set[str] | None = None) -> None:
     links, platforms = links_for(release(tag))
     if not links:
         sys.exit(f"{tag}: no downloadable files in the GitHub release")
-    cmd = ["node", str(CLI), "publish", SLUG, "--version", version, "--name", f"Jace Games {version}",
+    cmd = ["node", str(CLI), "publish", SLUG, "--version", version, "--name", f"Jace Live {version}",
            "--loaders", ",".join(platforms), "--changelog", changelog(version), "--json"]
     for link in links:
         cmd += ["--link", link]

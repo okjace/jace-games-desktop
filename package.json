@@ -1,8 +1,8 @@
 {
   "name": "jace-games-desktop",
-  "productName": "Jace Games",
-  "version": "1.0.0",
-  "description": "Jace Games on your desktop: arcade games, multiplayer, Live quiz games and Game Studio.",
+  "productName": "Jace Live",
+  "version": "1.1.0",
+  "description": "Jace Live on your desktop: live quiz and party games for the whole room.",
   "author": "jace.deb",
   "license": "MIT",
   "homepage": "https://github.com/okjace/jace-games-desktop",
@@ -21,7 +21,7 @@
   },
   "build": {
     "appId": "io.github.okjace.JaceGames",
-    "productName": "Jace Games",
+    "productName": "Jace Live",
     "copyright": "jace.deb",
     "directories": { "output": "dist", "buildResources": "build" },
     "files": ["src/**/*", "build/icon.png", "package.json"],
@@ -29,7 +29,7 @@
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "build/icon.ico",
-      "artifactName": "JaceGames-${version}-windows-x64.${ext}"
+      "artifactName": "JaceLive-${version}-windows-x64.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -38,8 +38,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Jace Games",
-      "uninstallDisplayName": "Jace Games",
+      "shortcutName": "Jace Live",
+      "uninstallDisplayName": "Jace Live",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "runAfterFinish": true,
@@ -54,10 +54,10 @@
       "category": "public.app-category.games",
       "identity": null,
       "minimumSystemVersion": "12.0",
-      "artifactName": "JaceGames-${version}-macos-${arch}.${ext}"
+      "artifactName": "JaceLive-${version}-macos-${arch}.${ext}"
     },
     "dmg": {
-      "title": "Jace Games",
+      "title": "Jace Live",
       "contents": [
         { "x": 140, "y": 180 },
         { "x": 400, "y": 180, "type": "link", "path": "/Applications" }
@@ -72,10 +72,10 @@
       "category": "Game",
       "synopsis": "Arcade games, multiplayer and Live quiz games from Jace",
       "maintainer": "jace.deb",
-      "artifactName": "JaceGames-${version}-${arch}.${ext}",
-      "desktop": { "entry": { "StartupWMClass": "Jace Games", "Keywords": "games;arcade;quiz;multiplayer;live;jace;" } }
+      "artifactName": "JaceLive-${version}-${arch}.${ext}",
+      "desktop": { "entry": { "StartupWMClass": "Jace Live", "Keywords": "games;arcade;quiz;multiplayer;live;jace;" } }
     },
-    "appImage": { "artifactName": "JaceGames-${version}-x86_64.${ext}" },
-    "deb": { "artifactName": "JaceGames-${version}-amd64.${ext}" }
+    "appImage": { "artifactName": "JaceLive-${version}-x86_64.${ext}" },
+    "deb": { "artifactName": "JaceLive-${version}-amd64.${ext}" }
   }
 }

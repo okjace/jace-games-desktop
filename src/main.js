@@ -1,4 +1,4 @@
-// Jace Games desktop app: the Jace Games site in a native window.
+// Jace Live desktop app: the Jace Live site in a native window.
 //
 // - Jace pages (the site, Jace sign-in, Jace Social) stay in the app; every other
 //   link opens in your normal browser.
@@ -13,8 +13,9 @@ const { app, BrowserWindow, Menu, shell, dialog, session, nativeTheme } = requir
 const fs = require("node:fs");
 const path = require("node:path");
 
-const SITE = "https://jace-games.vercel.app";
-const JACE_HOSTS = new Set(["jace-games.vercel.app", "jaceo.vercel.app", "jace-social.vercel.app"]);
+const SITE = "https://jace-live.vercel.app";
+// jace-games.vercel.app is the old address (it redirects to jace-live).
+const JACE_HOSTS = new Set(["jace-live.vercel.app", "jace-games.vercel.app", "jaceo.vercel.app", "jace-social.vercel.app"]);
 const REPO = "okjace/jace-games-desktop";
 const PARTITION = "persist:jacegames";
 const SELF_TEST = process.argv.includes("--self-test");
@@ -130,7 +131,7 @@ function createWindow() {
   const state = loadWindowState();
   win = new BrowserWindow(
     windowOptions({
-      title: "Jace Games",
+      title: "Jace Live",
       width: state.width,
       height: state.height,
       x: state.x,
@@ -158,7 +159,7 @@ function createWindow() {
     win.webContents.once("did-finish-load", async () => {
       clearTimeout(timer);
       const title = await win.webContents.executeJavaScript("document.title").catch(() => "");
-      done(title.includes("Jace Games"), `unexpected page title ${JSON.stringify(title)}`);
+      done(title.includes("Jace Live"), `unexpected page title ${JSON.stringify(title)}`);
     });
     win.loadFile(path.join(__dirname, "offline.html"), { query: { retry: SITE, test: "1" } });
     return;
@@ -174,7 +175,7 @@ function buildMenu() {
     ...(isMac ? [{ role: "appMenu" }] : []),
     {
       label: "File",
-      submenu: [isMac ? { role: "close" } : { role: "quit", label: "Quit Jace Games" }],
+      submenu: [isMac ? { role: "close" } : { role: "quit", label: "Quit Jace Live" }],
     },
     { role: "editMenu" },
     {
@@ -213,16 +214,16 @@ function buildMenu() {
       role: "help",
       submenu: [
         { label: "Check for Updates…", click: () => checkForUpdates(true) },
-        { label: "Open Jace Games in Your Browser", click: () => shell.openExternal(win?.webContents.getURL().startsWith("http") ? win.webContents.getURL() : SITE) },
+        { label: "Open Jace Live in Your Browser", click: () => shell.openExternal(win?.webContents.getURL().startsWith("http") ? win.webContents.getURL() : SITE) },
         { label: "Report a Problem", click: () => shell.openExternal(`https://github.com/${REPO}/issues`) },
         { type: "separator" },
         {
-          label: `About Jace Games ${app.getVersion()}`,
+          label: `About Jace Live ${app.getVersion()}`,
           click: () =>
             dialog.showMessageBox(win, {
               type: "info",
-              title: "About Jace Games",
-              message: `Jace Games ${app.getVersion()}`,
+              title: "About Jace Live",
+              message: `Jace Live ${app.getVersion()}`,
               detail: `Electron ${process.versions.electron}\nby jace.deb\n${SITE}`,
               icon: path.join(__dirname, "..", "build", "icon.png"),
             }),
@@ -265,7 +266,7 @@ async function checkForUpdates(fromMenu = false) {
         type: "info",
         buttons: ["Restart now", "Later"],
         defaultId: 0,
-        message: `Jace Games ${info.version} is ready`,
+        message: `Jace Live ${info.version} is ready`,
         detail: "Restart to finish updating. (If you choose Later, it updates the next time you quit.)",
       });
       if (r.response === 0) autoUpdater.quitAndInstall();
@@ -288,7 +289,7 @@ async function checkForUpdates(fromMenu = false) {
         type: "info",
         buttons: ["Download", "Later"],
         defaultId: 0,
-        message: `Jace Games ${latest} is out`,
+        message: `Jace Live ${latest} is out`,
         detail: `You have ${app.getVersion()}. Download the new version and install it over this one.`,
       });
       if (r.response === 0) shell.openExternal(rel.html_url || `https://github.com/${REPO}/releases/latest`);
@@ -303,7 +304,7 @@ async function checkForUpdates(fromMenu = false) {
 // ---------- start ----------
 
 app.whenReady().then(() => {
-  app.setName("Jace Games");
+  app.setName("Jace Live");
   if (process.platform === "win32") app.setAppUserModelId("io.github.okjace.JaceGames");
 
   const ses = session.fromPartition(PARTITION);

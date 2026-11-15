@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:" />
-    <title>Jace Games: you're offline</title>
+    <title>Jace Live: you're offline</title>
     <style>
       :root { color-scheme: light dark; --bg: #ffffff; --fg: #0c1410; --muted: #5b6470; --accent: #2fcf77; }
       @media (prefers-color-scheme: dark) { :root { --bg: #09090f; --fg: #f4f6f8; --muted: #9aa3ad; } }
@@ -26,14 +26,14 @@
     <main>
       <div class="tile" aria-hidden="true">🎮</div>
       <h1>You're offline</h1>
-      <p>Jace Games needs the internet. Check your Wi-Fi or connection, then try again.</p>
+      <p>Jace Live needs the internet. Check your Wi-Fi or connection, then try again.</p>
       <button id="retry" type="button">Try again</button>
       <small id="auto">Trying again automatically when you're back online.</small>
     </main>
     <script>
       const params = new URLSearchParams(location.search);
-      const target = params.get("retry") || "https://jace-games.vercel.app";
-      const safe = /^https:\/\/(jace-games|jaceo|jace-social)\.vercel\.app(\/|$)/.test(target) ? target : "https://jace-games.vercel.app";
+      const target = params.get("retry") || "https://jace-live.vercel.app";
+      const safe = /^https:\/\/(jace-live|jace-games|jaceo|jace-social)\.vercel\.app(\/|$)/.test(target) ? target : "https://jace-live.vercel.app";
       const btn = document.getElementById("retry");
       const go = () => { btn.disabled = true; btn.textContent = "Connecting…"; location.href = safe; };
       btn.addEventListener("click", go);

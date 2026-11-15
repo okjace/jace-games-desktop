@@ -1,4 +1,4 @@
-# Builds the Jace Games desktop app for Windows, macOS and Linux on GitHub's runners.
+# Builds the Jace Live desktop app for Windows, macOS and Linux on GitHub's runners.
 # Every push / PR uploads the installers as workflow artifacts.
 # A push to main with a new "version" in package.json (no release for it yet), or a
 # pushed tag like v1.0.0, also publishes them as a GitHub Release - which is also
@@ -54,18 +54,18 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $setup = (Get-ChildItem dist\JaceGames-*-windows-x64.exe)[0].FullName
+          $setup = (Get-ChildItem dist\JaceLive-*-windows-x64.exe)[0].FullName
           # 1. install silently, just for this user (no admin), like double-clicking it and pressing Next
           $p = Start-Process -FilePath $setup -ArgumentList "/S" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "setup exited with $($p.ExitCode)" }
-          $dir = "$env:LOCALAPPDATA\Programs\Jace Games"
-          $exe = "$dir\Jace Games.exe"
+          $dir = "$env:LOCALAPPDATA\Programs\Jace Live"
+          $exe = "$dir\Jace Live.exe"
           if (!(Test-Path $exe)) { throw "not installed at $exe" }
-          $sm = [Environment]::GetFolderPath("Programs") + "\Jace Games.lnk"
-          $dt = [Environment]::GetFolderPath("Desktop") + "\Jace Games.lnk"
+          $sm = [Environment]::GetFolderPath("Programs") + "\Jace Live.lnk"
+          $dt = [Environment]::GetFolderPath("Desktop") + "\Jace Live.lnk"
           if (!(Test-Path $sm)) { throw "Start menu shortcut missing" }
           if (!(Test-Path $dt)) { throw "desktop shortcut missing" }
-          $key = Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "Jace Games*" }
+          $key = Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "Jace Live*" }
           if (!$key) { throw "Installed apps entry missing" }
           Get-ItemProperty $key.PSPath | Select-Object DisplayName, DisplayVersion, Publisher, UninstallString | Format-List
           # 2. the installed app really starts
@@ -74,12 +74,12 @@ jobs:
           Get-Content $env:JACE_SELF_TEST_OUT
           if ($p.ExitCode -ne 0) { throw "self-test exited with $($p.ExitCode)" }
           # 3. uninstall removes the app, shortcuts and the Installed apps entry
-          $p = Start-Process -FilePath "$dir\Uninstall Jace Games.exe" -ArgumentList "/S" -Wait -PassThru
+          $p = Start-Process -FilePath "$dir\Uninstall Jace Live.exe" -ArgumentList "/S" -Wait -PassThru
           Start-Sleep -Seconds 8
           if (Test-Path $exe) { throw "app left behind" }
           if (Test-Path $sm) { throw "Start menu shortcut left behind" }
           if (Test-Path $dt) { throw "desktop shortcut left behind" }
-          if (Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "Jace Games*" }) { throw "Installed apps entry left behind" }
+          if (Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" | Where-Object { (Get-ItemProperty $_.PSPath).DisplayName -like "Jace Live*" }) { throw "Installed apps entry left behind" }
           "WINDOWS INSTALLER OK"
       - uses: actions/upload-artifact@v7
         with:
@@ -108,12 +108,12 @@ jobs:
           set -x
           for arch in arm64 x64; do
             rm -rf "$RUNNER_TEMP/app-$arch" && mkdir -p "$RUNNER_TEMP/app-$arch"
-            ditto -x -k dist/JaceGames-*-macos-$arch.zip "$RUNNER_TEMP/app-$arch"
-            APP="$RUNNER_TEMP/app-$arch/Jace Games.app"
+            ditto -x -k dist/JaceLive-*-macos-$arch.zip "$RUNNER_TEMP/app-$arch"
+            APP="$RUNNER_TEMP/app-$arch/Jace Live.app"
             test -d "$APP"
             /usr/libexec/PlistBuddy -c "Print LSMinimumSystemVersion" "$APP/Contents/Info.plist"
             if [ "$arch" = arm64 ] || sysctl -n sysctl.proc_translated >/dev/null 2>&1 || arch -x86_64 /usr/bin/true 2>/dev/null; then
-              JACE_SELF_TEST_OUT="$RUNNER_TEMP/selftest-$arch.txt" "$APP/Contents/MacOS/Jace Games" --self-test
+              JACE_SELF_TEST_OUT="$RUNNER_TEMP/selftest-$arch.txt" "$APP/Contents/MacOS/Jace Live" --self-test
               cat "$RUNNER_TEMP/selftest-$arch.txt"
             fi
           done
@@ -149,7 +149,7 @@ jobs:
           JACE_SELF_TEST_OUT: ${{ runner.temp }}/selftest.txt
         run: |
           chmod +x dist/*.AppImage
-          xvfb-run -a ./dist/JaceGames-*-x86_64.AppImage --self-test --no-sandbox
+          xvfb-run -a ./dist/JaceLive-*-x86_64.AppImage --self-test --no-sandbox
           cat "$JACE_SELF_TEST_OUT"
           grep -q "SELF-TEST OK" "$JACE_SELF_TEST_OUT"
       - uses: actions/upload-artifact@v7
@@ -183,7 +183,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Jace Games ${{ needs.version.outputs.tag }}
+          name: Jace Live ${{ needs.version.outputs.tag }}
           body_path: notes.md
           files: artifacts/*
 

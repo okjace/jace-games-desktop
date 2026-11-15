@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+Jace Games is now **Jace Live**.
+
+- New name and the new address (jace-live.vercel.app); old jace-games links still work
+- The new Jace Live: live quiz and party games, holiday themes, the theme maker and market, leaderboards, public profiles and more
+- Updates in place from 1.0.0 and keeps you signed in
+
 ## 1.0.0
 
 The first version of the Jace Games desktop app.
